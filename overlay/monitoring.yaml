@@ -50,6 +50,19 @@ spec:
             cluster: teste2/cluster-teste2
 
         grafana:
+          dashboards:
+            infraestrutura:
+              kubernetesv2:
+                datasource:
+                  - name: Prometheus-Externo
+                    value: prometheus-externo
+                gnetId: 6417
+                revision: 2
+              cert-manager:
+                datasource: prometheus
+                url: "https://raw.githubusercontent.com/adonaicosta/gitops-renato/main/overlay/dashboards-via-helm/cert-manager.json"
+                # se for um repo fechado, pega o token da conta
+                # url: "https://raw.githubusercontent.com/adonaicosta/gitops-renato/overlay/dashboard-via-helm/cert-manager.json?token=GHSATSASASASASASASASASASASASASASASASSASASASASASASAS"
           grafana.ini:
             server:
               root_url: https://grafana.xyz.com.br

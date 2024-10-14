@@ -1,0 +1,109 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: promtail
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "2"
+spec:
+  destination:
+    name: ''
+    namespace: monitoring
+    server: https://kubernetes.default.svc
+  source:
+    path: ''
+    repoURL: https://prometheus-msteams.github.io/prometheus-msteams/
+    targetRevision: 1.3.4
+    chart: prometheus-msteams
+    helm:
+      values: |-
+        resources: 
+          limits:
+            cpu: 50m
+            memory: 64Mi
+          requests:
+            cpu: 50m
+            memory: 64Mi
+        
+spec:
+  destination:
+    name: ''
+    namespace: logging
+    server: https://kubernetes.default.svc
+  source:
+    path: ''
+    repoURL: https://grafana.github.io/helm-charts
+    targetRevision: 6.15.2
+    chart: promtail
+    helm:
+      values: |-
+        config:
+          clients:
+            - url: http://loki-write:3100/loki/api/v1/push
+          snippets:
+            extraClientConfigs: |-
+              external_labels:
+                cluster: demo
+            extraRelabelConfigs:
+            - action: labeldrop
+              regex: __meta_kubernetes_pod_label_.*_hash
+            - source_labels:
+                - __meta_kubernetes_namespace
+              action: drop
+              regex: logging
+            - source_labels:
+                - __meta_kubernetes_pod_container_name
+              action: drop
+              regex: linkerd-proxy
+            - source_labels:
+                - __meta_kubernetes_pod_container_name
+              action: drop
+              regex: linkerd-init        
+            pipelineStages:
+              - cri: {}
+        #      - decolorize: {} ## waiting for new loki-stack
+              - multiline:
+                  firstline: '^[^\s]'
+                  max_lines: 128
+                  max_wait_time: 3s
+        resources:
+          requests:
+            cpu: 100m
+            memory: 100Mi
+          limits:
+            cpu: 200m
+            memory: 200Mi
+        serviceMonitor:
+          enabled: true
+          interval: 60s
+        updateStrategy:
+          rollingUpdate:
+            maxUnavailable: 20%
+          type: RollingUpdate
+        defaultVolumeMounts:
+        - mountPath: /var/lib/containers
+          name: containers
+          readOnly: true
+        - mountPath: /var/lib/docker/containers
+          name: docker
+          readOnly: true
+        - mountPath: /var/log/pods
+          name: pods
+          readOnly: true
+        defaultVolumes:
+        - hostPath:
+            path: /var/lib/containers
+          name: containers
+        - hostPath:
+            path: /var/lib/docker/containers
+          name: docker
+        - hostPath:
+            path: /var/log/pods
+          name: pods            
+  sources: []
+  project: default
+  syncPolicy:
+    automated:
+      prune: false
+      selfHeal: false
+

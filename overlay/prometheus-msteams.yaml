@@ -1,0 +1,20 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: prometheus-msteams
+  namespace: argocd
+spec:
+  source:
+    helm:
+      values: |-
+        resources: 
+          limits:
+            cpu: 50m
+            memory: 64Mi
+          requests:
+            cpu: 50m
+            memory: 64Mi
+        
+        connectors: 
+        - teams: https://365.webhook.office.com/webhook2/749/IncomingWebhook/e4e0bd5c9ec
+

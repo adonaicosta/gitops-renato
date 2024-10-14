@@ -1,0 +1,118 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: loki
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
+spec:
+  destination:
+    name: ''
+    namespace: logging
+    server: https://kubernetes.default.svc
+  source:
+    path: ''
+    repoURL: https://grafana.github.io/helm-charts
+    targetRevision: 5.27.0
+    chart: loki
+    helm:
+      values: |-
+        lokiCanary:
+          enabled: false
+        loki:
+          auth_enabled: false
+          #compactor:
+          #  shared_store: s3
+          #storage_config:
+          #  shared_store: s3
+          ingester:
+            chunk_encoding: snappy
+            chunk_idle_period: 10m
+            chunk_retain_period: 0s
+            wal:
+              flush_on_shutdown: true
+          limits_config:
+            max_entries_limit_per_query: 100000
+            retention_stream:
+              - selector: '{namespace="wsgen"}'
+                priority: 1
+                period: 72h
+              - period: 72h
+                priority: 1
+                selector: '{namespace="coft"}'
+              - period: 72h
+                priority: 1
+                selector: '{namespace="examplens"}'
+              - period: 24h
+                priority: 1
+                selector: '{namespace="devtools"}'
+              
+          memcached:
+            chunck_cache:
+              enabled: true
+          #useTestSchema: true
+          schemaConfig:
+            configs:
+              - from: "2024-04-01"
+                store: tsdb
+                object_store: s3
+                schema: v13
+                index:
+                  prefix: loki_index_
+                  period: 24h          
+          storage:
+            type: "s3"
+            s3:
+              region: sa-east-1
+              secretAccessKey: "fSXXXXXXXXXXXXXXXx2N"
+              accessKeyId: "AKXXXXXXXXXXXXXXXXXXO"
+
+            bucketNames:
+              chunks: loki-teste-527
+              ruler: loki-teste-527
+              admin: loki-teste-527
+              
+          commonConfig:
+            replication_factor: 1
+        ingress:
+          enabled: false
+        monitoring:
+          dashboards:
+            enabled: true
+          rules:
+            enabled: true
+          serviceMonitor:
+            enabled: true
+            interval: 30s
+          lokiCanary:
+            enabled: false
+          selfMonitoring:
+            enabled: false
+            grafanaAgent:
+              installOperator: false
+        write:
+          replicas: 1
+        read:
+          replicas: 1
+        backend:
+          replicas: 1
+        gateway:
+          enabled: false
+        singleBinary:
+          replicas: 0
+        table_manager:
+          enabled: true
+          retention_deletes_enabled: true
+          retention_period: 120h
+        test:
+          enabled: false
+
+  sources: []
+  project: default
+  syncPolicy:
+    automated:
+      prune: false
+      selfHeal: false
+    syncOptions:
+      - CreateNamespace=true
+            

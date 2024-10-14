@@ -4,5 +4,6 @@ resources:
 
 - ../base
 - dashboards-via-kustomize/
+- alertmanagers/
 - promtail.yaml
 - prometheus-msteams.yaml

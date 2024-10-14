@@ -78,7 +78,7 @@ spec:
               - disableDeletion: false
                 editable: true
                 folder: "infraestrutura"
-                name: kubernetes
+                name: infraestrutura
                 options:
                   path: /var/lib/grafana/dashboards/infraestrutura
                 orgId: 1

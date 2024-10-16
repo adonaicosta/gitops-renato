@@ -8,26 +8,6 @@ metadata:
 spec:
   destination:
     name: ''
-    namespace: monitoring
-    server: https://kubernetes.default.svc
-  source:
-    path: ''
-    repoURL: https://prometheus-msteams.github.io/prometheus-msteams/
-    targetRevision: 1.3.4
-    chart: prometheus-msteams
-    helm:
-      values: |-
-        resources: 
-          limits:
-            cpu: 50m
-            memory: 64Mi
-          requests:
-            cpu: 50m
-            memory: 64Mi
-        
-spec:
-  destination:
-    name: ''
     namespace: logging
     server: https://kubernetes.default.svc
   source:

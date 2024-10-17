@@ -57,7 +57,7 @@ spec:
                   - name: Prometheus-Externo
                     value: prometheus-externo
                 gnetId: 6417
-                revision: 2
+                revision: 1
               cert-manager:
                 datasource: prometheus
                 url: "https://raw.githubusercontent.com/adonaicosta/gitops-renato/main/overlay/dashboards-via-helm/cert-manager.json"

@@ -10,4 +10,3 @@ resources:
 patches:
 - path: monitoring.yaml
 - path: prometheus-msteams.yaml
-- path: elastic+kibana+filebeat.yaml

@@ -7,3 +7,4 @@ resources:
 - alertmanagers/
 - promtail.yaml
 - prometheus-msteams.yaml
+- elastic+kibana+filebeat.yaml

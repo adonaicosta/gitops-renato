@@ -6,3 +6,4 @@ resources:
 - promtail.yaml
 - monitoring.yaml
 - prometheus-msteams.yaml
+- elastic-operator.yaml

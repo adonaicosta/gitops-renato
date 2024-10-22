@@ -1,0 +1,226 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: elastic-stack
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "2"
+spec:
+  destination:
+    name: ''
+    namespace: elastic
+    server: 'https://kubernetes.default.svc'
+  source:
+    path: ''
+    repoURL: 'https://charts.getup.io/getupcloud'
+    targetRevision: 1.2.1
+    chart: templater
+    helm:
+      values: |
+        templates:
+        - |-
+          apiVersion: elasticsearch.k8s.elastic.co/v1
+          kind: Elasticsearch
+          metadata:
+            name: lyceum-dev
+            namespace: elastic
+          spec:
+            version: 8.15.3
+            http:
+              tls:
+                selfSignedCertificate:
+                  disabled: true
+            nodeSets:
+            - name: master
+              count: 1
+              config:
+                node.roles: 
+                - master
+                - remote_cluster_client
+                node.store.allow_mmap: false
+              podTemplate:
+                spec:
+                  tolerations:
+                  - effect: NoSchedule
+                    key: dedicated
+                    value: elastic
+                  initContainers:
+                  - name: sysctl
+                    securityContext:
+                      privileged: true
+                      runAsUser: 0
+                    command: ['sh', '-c', 'sysctl -w vm.max_map_count=262144']
+                  #containers:
+                  #- name: elasticsearch
+                  #  env:
+                  #  - name: ES_JAVA_OPTS
+                  #    value: -Xms3g -Xmx3g
+                  #  resources:
+                  #    requests:
+                  #      memory: 4Gi
+                  #    limits:
+                  #      memory: 4Gi
+              volumeClaimTemplates:
+              - metadata:
+                  name: elasticsearch-data
+                spec:
+                  accessModes:
+                  - ReadWriteOnce
+                  resources:
+                    requests:
+                      storage: 10Gi
+                  #storageClassName: gp3
+            - name: ingest-data
+              count: 3
+              config:
+                node.roles: 
+                - data
+                - ingest
+                - ml
+                - transform
+                - remote_cluster_client  
+                node.store.allow_mmap: false
+              podTemplate:
+                spec:
+                  tolerations:
+                  - effect: NoSchedule
+                    key: dedicated
+                    value: elastic
+                  initContainers:
+                  - name: sysctl
+                    securityContext:
+                      privileged: true
+                      runAsUser: 0
+                    command: ['sh', '-c', 'sysctl -w vm.max_map_count=262144']
+                  #containers:
+                  #- name: elasticsearch
+                  #  env:
+                  #  - name: ES_JAVA_OPTS
+                  #    value: -Xms3g -Xmx3g
+                  #  resources:
+                  #    requests:
+                  #      memory: 4Gi
+                  #    limits:
+                  #      memory: 4Gi
+              volumeClaimTemplates:
+              - metadata:
+                  name: elasticsearch-data
+                spec:
+                  accessModes:
+                  - ReadWriteOnce
+                  resources:
+                    requests:
+                      storage: 50Gi
+                  #storageClassName: gp3
+        - |-
+          apiVersion: kibana.k8s.elastic.co/v1
+          kind: Kibana
+          metadata:
+            name: lyceum-dev
+            namespace: elastic
+          spec:
+            config:
+              server:
+                publicBaseUrl: https://kibana-lyceus-dev.com
+            version: 8.15.3
+            count: 1
+            elasticsearchRef:
+              name: lyceum-dev
+            http:
+              tls:
+                selfSignedCertificate:
+                  disabled: true
+            podTemplate:
+              spec:
+                containers:
+                - name: kibana
+                  env:
+                  - name: NODE_OPTIONS
+                    value: "--max-old-space-size=2048"
+                  resources:
+                    limits:
+                      memory: 2Gi
+                    requests:
+                      cpu: 500m
+                      memory: 500Mi
+                #nodeSelector:
+                #  role: elastic
+                tolerations:
+                - effect: NoSchedule
+                  key: dedicated
+                  value: elastic
+        - |-
+          apiVersion: beat.k8s.elastic.co/v1beta1
+          kind: Beat
+          metadata:
+            name: lyceum-dev
+            namespace: elastic
+          spec:
+            type: filebeat
+            version: 8.15.3
+            elasticsearchRef:
+              name: lyceum-dev
+            config:
+              filebeat.inputs:
+              - type: container
+                paths:
+                - /var/log/containers/*.log
+            daemonSet:
+              podTemplate:
+                spec:
+                  dnsPolicy: ClusterFirstWithHostNet
+                  hostNetwork: true
+                  securityContext:
+                    runAsUser: 0
+                  containers:
+                  - name: filebeat
+                    volumeMounts:
+                    - name: varlogcontainers
+                      mountPath: /var/log/containers
+                    - name: varlogpods
+                      mountPath: /var/log/pods
+                    - name: varlibdockercontainers
+                      mountPath: /var/lib/docker/containers
+                  volumes:
+                  - name: varlogcontainers
+                    hostPath:
+                      path: /var/log/containers
+                  - name: varlogpods
+                    hostPath:
+                      path: /var/log/pods
+                  - name: varlibdockercontainers
+                    hostPath:
+                      path: /var/lib/docker/containers
+        - |-
+          apiVersion: networking.k8s.io/v1
+          kind: Ingress
+          metadata:
+            name: kb
+            namespace: elastic
+            annotations:
+              xcert-manager.io/cluster-issuer: letsencrypt-production-http01
+          spec:
+            ingressClassName: nginx
+            rules:
+            - host: kibana-lyceum-dev.com
+              http:
+                paths:
+                - backend:
+                    service:
+                      name: lyceus-dev-kb-http
+                      port:
+                        number: 5601
+                  path: /
+                  pathType: Prefix
+            #tls:
+            #- hosts:
+            #  - kibana-lyceum-dev.com
+            #  secretName: kibana-tls
+
+  sources: []
+  project: default
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+

@@ -168,6 +168,9 @@ spec:
             daemonSet:
               podTemplate:
                 spec:
+                  tolerations:
+                  - effect: NoSchedule
+                    operator: Exists
                   dnsPolicy: ClusterFirstWithHostNet
                   hostNetwork: true
                   securityContext:
@@ -223,4 +226,5 @@ spec:
     automated:
       prune: true
       selfHeal: true
-
+    syncOptions:
+      - CreateNamespace=true
